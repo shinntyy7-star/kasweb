@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uang Kas Kelas - Silver Glassmorphism</title>
+    <!-- Google Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS CDN (Untuk Export Excel XLSX) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f172a, #1e293b, #334155);
+            color: #f1f5f9;
+            position: relative;
+            overflow-x: hidden;
+            display: flex; /* Layout Flex untuk Sidebar & Main Content */
+        }
+
+        /* BACKGROUND BLOBS */
+        .blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(100px);
+            z-index: -1;
+        }
+        .blob-1 {
+            width: 400px;
+            height: 400px;
+            background: rgba(203, 213, 225, 0.15);
+            top: 5%;
+            left: 10%;
+        }
+        .blob-2 {
+            width: 450px;
+            height: 450px;
+            background: rgba(100, 116, 139, 0.25);
+            bottom: 5%;
+            right: 10%;
+        }
+
+        /* GLASSMORPHISM COMPONENT */
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+        }
+
+        /* SIDEBAR STYLES (NAVBAR DI SEBELAH KIRI) */
+        nav.sidebar {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            bottom: 20px;
+            width: 260px;
+            z-index: 100;
+            padding: 25px 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .nav-brand {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .nav-brand-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            list-style: none;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .nav-link {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: none;
+            background: transparent;
+            text-align: left;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: rgba(255, 255, 255, 0.12);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-export {
+            background: linear-gradient(135deg, #10b981, #059669) !important;
+            color: white !important;
+            font-weight: 600;
+            border: none !important;
+        }
+        .btn-export:hover { opacity: 0.9; }
+
+        .btn-login {
+            background: linear-gradient(135deg, #64748b, #475569) !important;
+            color: white !important;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            margin-top: 10px;
+        }
+        .btn-login:hover {
+            background: linear-gradient(135deg, #94a3b8, #64748b) !important;
+        }
+
+        .btn-logout {
+            background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+            color: white !important;
+            font-weight: 600;
+            border: none !important;
+            margin-top: 10px;
+        }
+
+        /* MAIN CONTAINER (GESER KE KANAN) */
+        .container {
+            margin-left: 300px; /* Memberi ruang untuk sidebar */
+            width: calc(100% - 320px);
+            padding: 20px 20px 40px 0;
+        }
+
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* CARDS & DASHBOARD */
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .card .icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.4rem;
+        }
+        .card-pemasukan .icon { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+        .card-pengeluaran .icon { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+        .card-saldo .icon { background: rgba(226, 232, 240, 0.15); color: #e2e8f0; }
+        .card-setting .icon { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; }
+
+        .card-info h3 {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }
+        .card-info p {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+        /* FORM STYLES */
+        .form-section {
+            padding: 24px;
+            margin-bottom: 25px;
+        }
+        .form-section h2 {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: #f1f5f9;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 11px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+            outline: none;
+            font-size: 0.88rem;
+        }
+        input::placeholder { color: #64748b; }
+        select option {
+            background: #1e293b;
+            color: #fff;
+        }
+        input:focus, select:focus {
+            border-color: #cbd5e1;
+            box-shadow: 0 0 10px rgba(203, 213, 225, 0.25);
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, #64748b, #475569);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-submit:hover { 
+            background: linear-gradient(135deg, #94a3b8, #64748b);
+        }
+
+        .btn-danger-action {
+            background: linear-gradient(135deg, #ef4444, #b91c1c);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: white;
+        }
+        .btn-danger-action:hover {
+            background: linear-gradient(135deg, #f87171, #dc2626);
+        }
+
+        /* TABLE STYLES */
+        .table-section {
+            padding: 24px;
+            overflow-x: auto;
+            margin-bottom: 25px;
+        }
+        .table-section h2 {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: #f1f5f9;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        th, td {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            font-size: 0.88rem;
+            white-space: nowrap;
+        }
+        th {
+            color: #94a3b8;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.02);
+        }
+        tbody tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .badge-masuk, .badge-lunas {
+            background: rgba(34, 197, 94, 0.15);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        .badge-keluar, .badge-belum {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .badge-clickable { cursor: pointer; }
+        .badge-clickable:hover { opacity: 0.8; }
+
+        .btn-del {
+            background: transparent;
+            border: none;
+            color: #f87171;
+            cursor: pointer;
+            width: auto;
+            padding: 4px;
+            font-size: 1rem;
+        }
+        .btn-del:hover { color: #ef4444; }
+
+        /* MODALS */
+        .modal-backdrop {
+            position: fixed;
+            top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            z-index: 200;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-backdrop.active { display: flex; }
+        .modal-box {
+            width: 90%;
+            max-width: 400px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        /* HIDE FOR NON-BENDAHARA */
+        .bendahara-only { display: none !important; }
+        body.is-bendahara .bendahara-only { display: block !important; }
+        body.is-bendahara tr.bendahara-only, body.is-bendahara button.bendahara-only { display: table-row !important; }
+
+        /* RESPONSIVE FOR TABLETS & MOBILE */
+        @media (max-width: 992px) {
+            body { flex-direction: column; }
+            nav.sidebar {
+                position: relative;
+                top: 0; left: 0; bottom: 0;
+                width: 92%;
+                margin: 15px auto 20px auto;
+                padding: 15px 20px;
+            }
+            .nav-brand {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 15px;
+                width: 100%;
+            }
+            .nav-menu {
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .nav-link { width: auto; }
+            .container {
+                margin-left: 0;
+                width: 92%;
+                margin: 0 auto;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <!-- SIDEBAR NAVIGATION (DI SEBELAH KIRI) -->
+    <nav class="sidebar glass">
+        <div>
+            <div class="nav-brand">
+                <div class="nav-brand-title">
+                    <i class="fa-solid fa-graduation-cap" style="color: #38bdf8;"></i>
+                    <span>Kas Kelas</span>
+                </div>
+                <span id="roleBadge" class="badge badge-belum">Mode Siswa</span>
+            </div>
+
+            <ul class="nav-menu">
+                <li>
+                    <button class="nav-link active" onclick="switchPage('transaksiPage', this)">
+                        <i class="fa-solid fa-list-check"></i> Transaksi
+                    </button>
+                </li>
+                <li>
+                    <button class="nav-link" onclick="switchPage('lunasPage', this)">
+                        <i class="fa-solid fa-calendar-check"></i> Status Lunas
+                    </button>
+                </li>
+                <li class="bendahara-only">
+                    <button class="nav-link" onclick="switchPage('siswaPage', this)">
+                        <i class="fa-solid fa-users"></i> Kelola Siswa
+                    </button>
+                </li>
+                <li class="bendahara-only">
+                    <button class="nav-link" onclick="switchPage('settingPage', this)">
+                        <i class="fa-solid fa-sliders"></i> Setting Kas
+                    </button>
+                </li>
+                <li>
+                    <button class="nav-link btn-export" onclick="exportToExcel()">
+                        <i class="fa-solid fa-file-excel"></i> Export
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <div>
+            <button id="btnLogin" class="nav-link btn-login" onclick="openLoginModal()">
+                <i class="fa-solid fa-lock"></i> Login Bendahara
+            </button>
+            <button id="btnLogout" class="nav-link btn-logout" onclick="logoutBendahara()" style="display: none;">
+                <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </button>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="container">
+
+        <!-- ================= PAGE 1: TRANSAKSI ================= -->
+        <div id="transaksiPage" class="page active">
+            <div class="dashboard">
+                <div class="card glass card-saldo">
+                    <div class="icon"><i class="fa-solid fa-scale-balanced"></i></div>
+                    <div class="card-info">
+                        <h3>Total Saldo Kas</h3>
+                        <p id="totalSaldo">Rp 0</p>
+                    </div>
+                </div>
+                <div class="card glass card-pemasukan">
+                    <div class="icon"><i class="fa-solid fa-arrow-down"></i></div>
+                    <div class="card-info">
+                        <h3>Total Pemasukan</h3>
+                        <p id="totalMasuk">Rp 0</p>
+                    </div>
+                </div>
+                <div class="card glass card-pengeluaran">
+                    <div class="icon"><i class="fa-solid fa-arrow-up"></i></div>
+                    <div class="card-info">
+                        <h3>Total Pengeluaran</h3>
+                        <p id="totalKeluar">Rp 0</p>
+                    </div>
+                </div>
+                <div class="card glass card-setting">
+                    <div class="icon"><i class="fa-solid fa-bullseye"></i></div>
+                    <div class="card-info">
+                        <h3>Target Kas (<span id="periodeLabel">Per Minggu</span>)</h3>
+                        <p id="targetNominal">Rp 0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Khusus Bendahara: Form Tambah Transaksi -->
+            <div class="form-section glass bendahara-only">
+                <h2>Tambah Transaksi Manual</h2>
+                <form id="kasForm" class="form-grid">
+                    <input type="date" id="tanggal" required>
+                    <select id="siswaSelect">
+                        <option value="">-- Pilih Siswa (Opsional) --</option>
+                    </select>
+                    <input type="number" id="jumlah" placeholder="Jumlah (Rp)" min="1" required>
+                    <select id="jenis">
+                        <option value="masuk">Pemasukan (+)</option>
+                        <option value="keluar">Pengeluaran (-)</option>
+                    </select>
+                    <button type="submit" class="btn-submit"><i class="fa-solid fa-plus"></i> Simpan Transaksi</button>
+                </form>
+            </div>
+
+            <div class="table-section glass">
+                <h2>Riwayat Transaksi</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tanggal</th>
+                            <th>Siswa</th>
+                            <th>Jenis</th>
+                            <th>Jumlah</th>
+                            <th class="bendahara-only">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionList"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ================= PAGE 2: STATUS LUNAS SISWA PER MINGGU ================= -->
+        <div id="lunasPage" class="page">
+            <div class="form-section glass" style="display: flex; gap: 15px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                <div>
+                    <h2>Rekap Status Kelunasan Siswa</h2>
+                    <p style="font-size: 0.85rem; color: #cbd5e1;">Klik tombol status untuk mengubah lunas dan menambah kas secara otomatis (Khusus Bendahara).</p>
+                </div>
+                <div style="width: 200px;">
+                    <select id="bulanFilter" onchange="renderLunasTable()">
+                        <option value="Januari">Januari</option>
+                        <option value="Februari">Februari</option>
+                        <option value="Maret">Maret</option>
+                        <option value="April">April</option>
+                        <option value="Mei">Mei</option>
+                        <option value="Juni">Juni</option>
+                        <option value="Juli">Juli</option>
+                        <option value="Agustus">Agustus</option>
+                        <option value="September" selected>September</option>
+                        <option value="Oktober">Oktober</option>
+                        <option value="November">November</option>
+                        <option value="Desember">Desember</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-section glass">
+                <table id="lunasTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">No</th>
+                            <th>Nama Siswa</th>
+                            <th>Minggu 1</th>
+                            <th>Minggu 2</th>
+                            <th>Minggu 3</th>
+                            <th>Minggu 4</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lunasList"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ================= PAGE 3: KELOLA DATA SISWA ================= -->
+        <div id="siswaPage" class="page">
+            <div class="form-section glass">
+                <h2>Tambah Data Siswa</h2>
+                <form id="siswaForm" style="display: flex; gap: 10px;">
+                    <input type="text" id="namaSiswa" placeholder="Nama Lengkap Siswa" required style="flex: 1;">
+                    <button type="submit" class="btn-submit" style="width: auto; padding: 0 25px;">
+                        <i class="fa-solid fa-user-plus"></i> Tambah Siswa
+                    </button>
+                </form>
+            </div>
+
+            <div class="table-section glass">
+                <h2>Daftar Siswa Kelas</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">No</th>
+                            <th>Nama Siswa</th>
+                            <th style="width: 100px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="siswaList"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ================= PAGE 4: SETTINGAN UANG KAS ================= -->
+        <div id="settingPage" class="page">
+            <div class="form-section glass">
+                <h2>Pengaturan Acuan Uang Kas</h2>
+                <form id="settingForm" class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px;">Periode Pembayaran Kas</label>
+                        <select id="periodeKas">
+                            <option value="Hari">Per Hari</option>
+                            <option value="Minggu">Per Minggu</option>
+                            <option value="Bulan">Per Bulan</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px;">Nominal Wajib Kas (Rp)</label>
+                        <input type="number" id="nominalKas" placeholder="Contoh: 5000" min="0" required>
+                    </div>
+                    <div style="grid-column: span 2;">
+                        <button type="submit" class="btn-submit"><i class="fa-solid fa-floppy-disk"></i> Simpan Pengaturan</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="form-section glass">
+                <h2>Ubah PIN Bendahara</h2>
+                <form id="pinForm" style="display: flex; gap: 10px;">
+                    <input type="password" id="newPin" placeholder="PIN Baru (Contoh: 1234)" required style="flex: 1;">
+                    <button type="submit" class="btn-submit" style="width: auto; padding: 0 25px;">
+                        <i class="fa-solid fa-key"></i> Ubah PIN
+                    </button>
+                </form>
+            </div>
+
+            <!-- RESET / CLEAR DATA -->
+            <div class="form-section glass" style="border: 1px solid rgba(239, 68, 68, 0.3);">
+                <h2 style="color: #f87171;"><i class="fa-solid fa-triangle-exclamation"></i> Zona Bahaya (Reset Data Kas)</h2>
+                <p style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 15px;">
+                    Aksi ini akan menghapus **semua data transaksi, daftar siswa, dan status kelunasan** secara permanen.
+                </p>
+                <button type="button" class="btn-danger-action" onclick="clearClassData()">
+                    <i class="fa-solid fa-trash-can"></i> Hapus / Clear Data Kas
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MODAL LOGIN BENDAHARA -->
+    <div id="loginModal" class="modal-backdrop">
+        <div class="modal-box glass">
+            <h2 style="margin-bottom: 15px;"><i class="fa-solid fa-user-shield"></i> Login Bendahara</h2>
+            <p style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 20px;">Masukkan PIN keamanan untuk mengakses akun bendahara.</p>
+            <form id="loginForm">
+                <input type="password" id="pinInput" placeholder="Masukkan PIN (Default: 1234)" style="margin-bottom: 15px; text-align: center;" required>
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" onclick="closeLoginModal()" style="background: rgba(255,255,255,0.1);">Batal</button>
+                    <button type="submit" class="btn-submit">Login</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // SYSTEM STATE
+        let isBendahara = false;
+        let bendaharaPin = localStorage.getItem('bendahara_pin') || '1234';
+        
+        let transactions = JSON.parse(localStorage.getItem('trans_data')) || [];
+        let siswaData = JSON.parse(localStorage.getItem('siswa_data')) || [];
+        let kasSetting = JSON.parse(localStorage.getItem('setting_data')) || { periode: 'Minggu', nominal: 5000 };
+        let lunasData = JSON.parse(localStorage.getItem('lunas_data')) || {};
+
+        // INITIALIZE APP
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('tanggal').valueAsDate = new Date();
+            
+            loadSettings();
+            updateSiswaOptions();
+            renderSiswaTable();
+            updateUI();
+            renderLunasTable();
+        });
+
+        // AUTH SYSTEM (LOGIN BENDAHARA)
+        function openLoginModal() {
+            document.getElementById('loginModal').classList.add('active');
+            document.getElementById('pinInput').value = '';
+            document.getElementById('pinInput').focus();
+        }
+
+        function closeLoginModal() {
+            document.getElementById('loginModal').classList.remove('active');
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const inputPin = document.getElementById('pinInput').value;
+            if (inputPin === bendaharaPin) {
+                isBendahara = true;
+                document.body.classList.add('is-bendahara');
+                document.getElementById('btnLogin').style.display = 'none';
+                document.getElementById('btnLogout').style.display = 'flex';
+                
+                const roleBadge = document.getElementById('roleBadge');
+                roleBadge.textContent = 'Bendahara';
+                roleBadge.className = 'badge badge-lunas';
+                
+                closeLoginModal();
+                updateUI();
+                renderLunasTable();
+                alert('Berhasil login sebagai Bendahara!');
+            } else {
+                alert('PIN Salah! Silahkan coba lagi.');
+            }
+        });
+
+        function logoutBendahara() {
+            isBendahara = false;
+            document.body.classList.remove('is-bendahara');
+            document.getElementById('btnLogin').style.display = 'flex';
+            document.getElementById('btnLogout').style.display = 'none';
+            
+            const roleBadge = document.getElementById('roleBadge');
+            roleBadge.textContent = 'Mode Siswa';
+            roleBadge.className = 'badge badge-belum';
+            
+            switchPage('transaksiPage', document.querySelectorAll('.nav-link')[0]);
+            updateUI();
+            renderLunasTable();
+            alert('Anda telah keluar dari mode Bendahara.');
+        }
+
+        // SWITCH TAB PAGE
+        function switchPage(pageId, element) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            
+            document.getElementById(pageId).classList.add('active');
+            element.classList.add('active');
+        }
+
+        // FORMAT RUPIAH
+        function formatRupiah(number) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(number);
+        }
+
+        // --- SECTION 1: TRANSAKSI ---
+        function updateUI() {
+            const list = document.getElementById('transactionList');
+            list.innerHTML = '';
+
+            let totalMasuk = 0;
+            let totalKeluar = 0;
+
+            if (transactions.length === 0) {
+                list.innerHTML = `<tr><td colspan="${isBendahara ? 5 : 4}" style="text-align: center; color: #94a3b8;">Belum ada riwayat transaksi.</td></tr>`;
+            } else {
+                transactions.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+
+                transactions.forEach((item, index) => {
+                    const isMasuk = item.jenis === 'masuk';
+                    if (isMasuk) totalMasuk += item.jumlah;
+                    else totalKeluar += item.jumlah;
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.tanggal}</td>
+                        <td>${item.siswa || '-'}</td>
+                        <td><span class="badge ${isMasuk ? 'badge-masuk' : 'badge-keluar'}">${isMasuk ? 'Masuk' : 'Keluar'}</span></td>
+                        <td style="font-weight: 600; color: ${isMasuk ? '#4ade80' : '#f87171'}">${isMasuk ? '+' : '-'} ${formatRupiah(item.jumlah)}</td>
+                        ${isBendahara ? `<td><button class="btn-del" onclick="deleteTransaction(${index})"><i class="fa-solid fa-trash"></i></button></td>` : ''}
+                    `;
+                    list.appendChild(row);
+                });
+            }
+
+            document.getElementById('totalSaldo').textContent = formatRupiah(totalMasuk - totalKeluar);
+            document.getElementById('totalMasuk').textContent = formatRupiah(totalMasuk);
+            document.getElementById('totalKeluar').textContent = formatRupiah(totalKeluar);
+
+            localStorage.setItem('trans_data', JSON.stringify(transactions));
+        }
+
+        document.getElementById('kasForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            transactions.push({
+                tanggal: document.getElementById('tanggal').value,
+                siswa: document.getElementById('siswaSelect').value,
+                jumlah: parseFloat(document.getElementById('jumlah').value),
+                jenis: document.getElementById('jenis').value
+            });
+            updateUI();
+            document.getElementById('jumlah').value = '';
+            document.getElementById('siswaSelect').value = '';
+        });
+
+        function deleteTransaction(index) {
+            if (confirm('Hapus transaksi ini?')) {
+                const deleted = transactions.splice(index, 1)[0];
+                
+                if (deleted.lunasKey && lunasData[deleted.lunasKey]) {
+                    delete lunasData[deleted.lunasKey];
+                    localStorage.setItem('lunas_data', JSON.stringify(lunasData));
+                    renderLunasTable();
+                }
+
+                updateUI();
+            }
+        }
+
+        // --- SECTION 2: STATUS LUNAS PER MINGGU ---
+        function renderLunasTable() {
+            const list = document.getElementById('lunasList');
+            const bulan = document.getElementById('bulanFilter').value;
+            list.innerHTML = '';
+
+            if (siswaData.length === 0) {
+                list.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #94a3b8;">Belum ada data siswa.</td></tr>`;
+                return;
+            }
+
+            siswaData.forEach((siswa, index) => {
+                const row = document.createElement('tr');
+                let mingguCols = '';
+
+                for (let w = 1; w <= 4; w++) {
+                    const key = `${siswa}_${bulan}_W${w}`;
+                    const isLunas = !!lunasData[key];
+
+                    mingguCols += `
+                        <td>
+                            <span class="badge ${isLunas ? 'badge-lunas' : 'badge-belum'} ${isBendahara ? 'badge-clickable' : ''}" 
+                                  onclick="${isBendahara ? `toggleLunas('${key}', '${siswa}', '${bulan}',${w})` : ''}"
+                                  title="${isBendahara ? 'Klik untuk ubah status lunas' : 'Status Pembayaran'}">
+                                ${isLunas ? 'Lunas' : 'Belum'}
+                            </span>
+                        </td>
+                    `;
+                }
+
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td style="font-weight: 500;">${siswa}</td>
+                    ${mingguCols}
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        function toggleLunas(key, siswa, bulan, minggu) {
+            if (!isBendahara) return;
+
+            const isCurrentLunas = !!lunasData[key];
+            const nextLunasState = !isCurrentLunas;
+
+            lunasData[key] = nextLunasState;
+            localStorage.setItem('lunas_data', JSON.stringify(lunasData));
+
+            const today = new Date().toISOString().slice(0, 10);
+            const nominalAcuan = kasSetting.nominal || 0;
+
+            if (nextLunasState) {
+                transactions.push({
+                    id: Date.now(),
+                    tanggal: today,
+                    siswa: siswa,
+                    jumlah: nominalAcuan,
+                    jenis: 'masuk',
+                    lunasKey: key
+                });
+            } else {
+                transactions = transactions.filter(t => t.lunasKey !== key);
+            }
+
+            updateUI();
+            renderLunasTable();
+        }
+
+        // --- SECTION 3: KELOLA SISWA ---
+        document.getElementById('siswaForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const nama = document.getElementById('namaSiswa').value.trim();
+            if (nama) {
+                siswaData.push(nama);
+                localStorage.setItem('siswa_data', JSON.stringify(siswaData));
+                document.getElementById('namaSiswa').value = '';
+                renderSiswaTable();
+                updateSiswaOptions();
+                renderLunasTable();
+            }
+        });
+
+        function renderSiswaTable() {
+            const list = document.getElementById('siswaList');
+            list.innerHTML = '';
+            
+            if (siswaData.length === 0) {
+                list.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #94a3b8;">Belum ada data siswa.</td></tr>`;
+            } else {
+                siswaData.forEach((nama, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${nama}</td>
+                        <td><button class="btn-del" onclick="deleteSiswa(${index})"><i class="fa-solid fa-trash"></i></button></td>
+                    `;
+                    list.appendChild(row);
+                });
+            }
+        }
+
+        function updateSiswaOptions() {
+            const select = document.getElementById('siswaSelect');
+            select.innerHTML = '<option value="">-- Pilih Siswa (Opsional) --</option>';
+            siswaData.forEach(nama => {
+                select.innerHTML += `<option value="${nama}">${nama}</option>`;
+            });
+        }
+
+        function deleteSiswa(index) {
+            if (confirm('Hapus data siswa ini?')) {
+                siswaData.splice(index, 1);
+                localStorage.setItem('siswa_data', JSON.stringify(siswaData));
+                renderSiswaTable();
+                updateSiswaOptions();
+                renderLunasTable();
+            }
+        }
+
+        // --- SECTION 4: SETTING KAS, PIN, & CLEAR DATA ---
+        function loadSettings() {
+            document.getElementById('periodeKas').value = kasSetting.periode;
+            document.getElementById('nominalKas').value = kasSetting.nominal;
+            document.getElementById('periodeLabel').textContent = `Per ${kasSetting.periode}`;
+            document.getElementById('targetNominal').textContent = formatRupiah(kasSetting.nominal);
+        }
+
+        document.getElementById('settingForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            kasSetting = {
+                periode: document.getElementById('periodeKas').value,
+                nominal: parseFloat(document.getElementById('nominalKas').value)
+            };
+            localStorage.setItem('setting_data', JSON.stringify(kasSetting));
+            loadSettings();
+            alert('Settingan kas berhasil disimpan!');
+        });
+
+        document.getElementById('pinForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const pinBaru = document.getElementById('newPin').value.trim();
+            if (pinBaru) {
+                bendaharaPin = pinBaru;
+                localStorage.setItem('bendahara_pin', bendaharaPin);
+                document.getElementById('newPin').value = '';
+                alert('PIN Bendahara berhasil diperbarui!');
+            }
+        });
+
+        // HAPUS SEMUA DATA KAS
+        function clearClassData() {
+            if (!isBendahara) return;
+
+            const confirmInput = prompt('Apakah Anda yakin ingin MENGHAPUS SEMUA DATA KAS?\n\nKetik kata "HAPUS" untuk konfirmasi:');
+            
+            if (confirmInput === 'HAPUS') {
+                // Hapus item dari LocalStorage
+                localStorage.removeItem('trans_data');
+                localStorage.removeItem('siswa_data');
+                localStorage.removeItem('lunas_data');
+
+                // Reset variabel state local
+                transactions = [];
+                siswaData = [];
+                lunasData = {};
+
+                // Update Tampilan UI
+                updateUI();
+                renderSiswaTable();
+                updateSiswaOptions();
+                renderLunasTable();
+
+                alert('Data Kas telah berhasil dikosongkan/di-clear!');
+            } else if (confirmInput !== null) {
+                alert('Konfirmasi batal: Kata kunci konfirmasi tidak sesuai.');
+            }
+        }
+
+        // --- SECTION 5: EXPORT TO XLSX ---
+        function exportToExcel() {
+            if (transactions.length === 0) {
+                alert('Tidak ada data transaksi untuk di-export!');
+                return;
+            }
+
+            const excelData = transactions.map((t, i) => ({
+                'No': i + 1,
+                'Tanggal': t.tanggal,
+                'Nama Siswa': t.siswa || '-',
+                'Jenis': t.jenis === 'masuk' ? 'Pemasukan' : 'Pengeluaran',
+                'Jumlah (Rp)': t.jumlah
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan Kas');
+
+            XLSX.writeFile(workbook, `Laporan_Kas_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+    </script>
+</body>
+</html>
